@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>전자 가려막기 효과 시뮬레이션</title>
+  <title>전자 껍질 시뮬레이션 & 원자 추정</title>
   <style>
     body {
       background: #0b0c10;
@@ -12,47 +12,86 @@
       margin: 0;
       padding: 20px;
     }
+
     h1 {
       color: #66fcf1;
     }
+
     canvas {
       background: #1f2833;
       border: 2px solid #45a29e;
       border-radius: 10px;
       margin-top: 20px;
     }
+
     .controls {
       margin-top: 20px;
     }
+
+    .controls label {
+      margin: 0 10px;
+    }
+
     .controls input {
       width: 60px;
       margin: 5px;
-      padding: 5px;
-      border-radius: 5px;
-      border: 1px solid #45a29e;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid #66fcf1;
       background: #0b0c10;
       color: white;
+      text-align: center;
+      font-weight: bold;
     }
-    label {
-      margin: 0 10px;
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #66fcf1;
+      color: #0b0c10;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a29e;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    .highlight {
+      color: #f1fa8c;
     }
   </style>
 </head>
 <body>
-  <h1>전자 가려막기 효과 시뮬레이션</h1>
+  <h1>전자 껍질 시뮬레이션 & 원자 상태 분석</h1>
   <div class="controls">
-    <label>K껍질:
+    <label>K:
       <input type="number" id="kShell" value="2" min="0" max="2">
     </label>
-    <label>L껍질:
+    <label>L:
       <input type="number" id="lShell" value="8" min="0" max="8">
     </label>
-    <label>M껍질:
+    <label>M:
       <input type="number" id="mShell" value="0" min="0" max="18">
     </label>
-    <button onclick="draw()">시뮬레이션 업데이트</button>
+    <label>N:
+      <input type="number" id="nShell" value="0" min="0" max="32">
+    </label>
+    <br />
+    <button onclick="simulate()">시뮬레이션 시작</button>
   </div>
+
   <canvas id="atomCanvas" width="600" height="600"></canvas>
+
+  <div class="result" id="analysisResult"></div>
 
   <script>
     const canvas = document.getElementById("atomCanvas");
@@ -60,47 +99,107 @@
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const knownAtoms = {
+      1: { name: "수소", config: [1, 0, 0, 0] },
+      2: { name: "헬륨", config: [2, 0, 0, 0] },
+      3: { name: "리튬", config: [2, 1, 0, 0] },
+      4: { name: "베릴륨", config: [2, 2, 0, 0] },
+      5: { name: "붕소", config: [2, 3, 0, 0] },
+      6: { name: "탄소", config: [2, 4, 0, 0] },
+      7: { name: "질소", config: [2, 5, 0, 0] },
+      8: { name: "산소", config: [2, 6, 0, 0] },
+      9: { name: "플루오린", config: [2, 7, 0, 0] },
+      10: { name: "네온", config: [2, 8, 0, 0] },
+      11: { name: "나트륨", config: [2, 8, 1, 0] },
+      12: { name: "마그네슘", config: [2, 8, 2, 0] },
+      13: { name: "알루미늄", config: [2, 8, 3, 0] },
+      14: { name: "규소", config: [2, 8, 4, 0] },
+      15: { name: "인", config: [2, 8, 5, 0] },
+      16: { name: "황", config: [2, 8, 6, 0] },
+      17: { name: "염소", config: [2, 8, 7, 0] },
+      18: { name: "아르곤", config: [2, 8, 8, 0] },
+      19: { name: "칼륨", config: [2, 8, 8, 1] },
+      20: { name: "칼슘", config: [2, 8, 8, 2] },
+    };
 
-      // 껍질별 전자 수 가져오기
+    function arraysEqual(a, b) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+
+    function findAtomByConfig(input) {
+      for (const [atomicNum, atom] of Object.entries(knownAtoms)) {
+        if (arraysEqual(atom.config, input)) {
+          return { atomicNum: parseInt(atomicNum), name: atom.name };
+        }
+      }
+      return null;
+    }
+
+    function simulate() {
       const k = parseInt(document.getElementById("kShell").value);
       const l = parseInt(document.getElementById("lShell").value);
       const m = parseInt(document.getElementById("mShell").value);
+      const n = parseInt(document.getElementById("nShell").value);
 
-      // 가려막기 효과 시각화 (전자 수에 비례한 핵 투명도)
-      const totalElectrons = k + l + m;
-      const maxShield = 28; // K(2)+L(8)+M(18)
-      const coreAlpha = 1 - totalElectrons / maxShield;
+      const inputConfig = [k, l, m, n];
+      const totalElectrons = k + l + m + n;
+      const match = findAtomByConfig(inputConfig);
 
-      // 핵 그리기
+      let stateText = "";
+      if (match) {
+        stateText = `🌟 원자: <span class="highlight">${match.name} (Z=${match.atomicNum})</span><br>상태: <span class="highlight">바닥 상태</span>`;
+      } else {
+        // 바닥 상태 후보 찾기
+        let closest = null;
+        for (const [z, atom] of Object.entries(knownAtoms)) {
+          const total = atom.config.reduce((a, b) => a + b, 0);
+          if (total === totalElectrons) {
+            closest = atom;
+            break;
+          }
+        }
+        if (closest) {
+          stateText = `🌟 전자 수는 <span class="highlight">${totalElectrons}</span>개이며, <span class="highlight">${closest.name}</span>의 들뜬 상태일 수 있습니다.<br>상태: <span class="highlight">들뜬 상태</span>`;
+        } else {
+          stateText = `⚠️ <span class="highlight">${totalElectrons}</span>개의 전자는 현재 데이터에 없는 원소이거나 범위를 초과합니다.`;
+        }
+      }
+
+      document.getElementById("analysisResult").innerHTML = stateText;
+      drawAtom(k, l, m, n);
+    }
+
+    function drawAtom(k, l, m, n) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const shells = [
+        { radius: 80, count: k, color: "#66fcf1" },
+        { radius: 130, count: l, color: "#45a29e" },
+        { radius: 180, count: m, color: "#c5c6c7" },
+        { radius: 230, count: n, color: "#be9fe1" },
+      ];
+
+      const totalElectrons = k + l + m + n;
+      const coreAlpha = 1 - totalElectrons / 40;
+
+      // 핵
       ctx.beginPath();
       ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 0, 0, ${Math.max(0.2, coreAlpha)})`;
       ctx.fill();
       ctx.closePath();
 
-      // 껍질 그리기 및 전자 배치
-      const shells = [
-        { radius: 80, count: k, color: "#66fcf1" },
-        { radius: 130, count: l, color: "#45a29e" },
-        { radius: 180, count: m, color: "#c5c6c7" },
-      ];
-
+      // 전자 껍질 및 전자
       shells.forEach(shell => {
-        // 껍질 원 그리기
         ctx.beginPath();
         ctx.arc(centerX, centerY, shell.radius, 0, Math.PI * 2);
         ctx.strokeStyle = shell.color;
         ctx.stroke();
         ctx.closePath();
 
-        // 전자 배치
         for (let i = 0; i < shell.count; i++) {
           const angle = (2 * Math.PI * i) / shell.count;
           const x = centerX + shell.radius * Math.cos(angle);
           const y = centerY + shell.radius * Math.sin(angle);
-
           ctx.beginPath();
           ctx.arc(x, y, 5, 0, Math.PI * 2);
           ctx.fillStyle = shell.color;
@@ -108,15 +207,9 @@
           ctx.closePath();
         }
       });
-
-      // 설명 텍스트
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "16px Arial";
-      ctx.fillText(`총 전자 수: ${totalElectrons}`, 20, 30);
-      ctx.fillText(`가려막기 정도 (투명도): ${(1 - coreAlpha).toFixed(2)}`, 20, 50);
     }
 
-    draw(); // 초기 실행
+    simulate(); // 초기 실행
   </script>
 </body>
 </html>
