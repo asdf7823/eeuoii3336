@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>전자 가려막기 효과 시뮬레이션</title>
+  <style>
+    body {
+      background: #0b0c10;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #66fcf1;
+    }
+    canvas {
+      background: #1f2833;
+      border: 2px solid #45a29e;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    .controls input {
+      width: 60px;
+      margin: 5px;
+      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid #45a29e;
+      background: #0b0c10;
+      color: white;
+    }
+    label {
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>전자 가려막기 효과 시뮬레이션</h1>
+  <div class="controls">
+    <label>K껍질:
+      <input type="number" id="kShell" value="2" min="0" max="2">
+    </label>
+    <label>L껍질:
+      <input type="number" id="lShell" value="8" min="0" max="8">
+    </label>
+    <label>M껍질:
+      <input type="number" id="mShell" value="0" min="0" max="18">
+    </label>
+    <button onclick="draw()">시뮬레이션 업데이트</button>
+  </div>
+  <canvas id="atomCanvas" width="600" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("atomCanvas");
+    const ctx = canvas.getContext("2d");
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 껍질별 전자 수 가져오기
+      const k = parseInt(document.getElementById("kShell").value);
+      const l = parseInt(document.getElementById("lShell").value);
+      const m = parseInt(document.getElementById("mShell").value);
+
+      // 가려막기 효과 시각화 (전자 수에 비례한 핵 투명도)
+      const totalElectrons = k + l + m;
+      const maxShield = 28; // K(2)+L(8)+M(18)
+      const coreAlpha = 1 - totalElectrons / maxShield;
+
+      // 핵 그리기
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 0, 0, ${Math.max(0.2, coreAlpha)})`;
+      ctx.fill();
+      ctx.closePath();
+
+      // 껍질 그리기 및 전자 배치
+      const shells = [
+        { radius: 80, count: k, color: "#66fcf1" },
+        { radius: 130, count: l, color: "#45a29e" },
+        { radius: 180, count: m, color: "#c5c6c7" },
+      ];
+
+      shells.forEach(shell => {
+        // 껍질 원 그리기
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, shell.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = shell.color;
+        ctx.stroke();
+        ctx.closePath();
+
+        // 전자 배치
+        for (let i = 0; i < shell.count; i++) {
+          const angle = (2 * Math.PI * i) / shell.count;
+          const x = centerX + shell.radius * Math.cos(angle);
+          const y = centerY + shell.radius * Math.sin(angle);
+
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = shell.color;
+          ctx.fill();
+          ctx.closePath();
+        }
+      });
+
+      // 설명 텍스트
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "16px Arial";
+      ctx.fillText(`총 전자 수: ${totalElectrons}`, 20, 30);
+      ctx.fillText(`가려막기 정도 (투명도): ${(1 - coreAlpha).toFixed(2)}`, 20, 50);
+    }
+
+    draw(); // 초기 실행
+  </script>
+</body>
+</html>
